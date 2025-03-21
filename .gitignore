@@ -1,0 +1,7 @@
+# User-specific files
+*.xcuserdatad/
+*.xcscmblueprint
+
+# Workspace and user state
+**/xcuserdata/
+**/xcshareddata/WorkspaceSettings.xcsettings
