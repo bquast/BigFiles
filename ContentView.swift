@@ -6,11 +6,9 @@
 //
 
 import SwiftUI
-import CoreData
 import AppKit
 
 struct ContentView: View {
-    @Environment(\.managedObjectContext) private var viewContext
     @StateObject private var fileTree = FileTree()
     @State private var currentPath: URL?
     @State private var isScanning = false
@@ -129,5 +127,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+    ContentView()
 }
