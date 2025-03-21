@@ -153,20 +153,29 @@ struct TreemapCell: View {
     
     var body: some View {
         ZStack(alignment: .topLeading) {
-            // Base rectangle
+            // Base rectangle with stronger hover effect
             Rectangle()
-                .fill(color.opacity(isHovering && item.isDirectory ? 0.8 : 0.6))
+                .fill(color.opacity(isHovering ? 1.0 : 0.6))
                 .frame(width: rect.width, height: rect.height)
             
-            // White border
+            // White border (much thicker on hover)
             Rectangle()
-                .stroke(Color.white, lineWidth: 1)
-                .opacity(0.4)
+                .stroke(Color.white, lineWidth: isHovering ? 3 : 1)
+                .opacity(isHovering ? 0.9 : 0.4)
                 .frame(width: rect.width, height: rect.height)
+            
+            // Glow effect on hover
+            if isHovering {
+                Rectangle()
+                    .stroke(Color.white, lineWidth: 2)
+                    .blur(radius: 3)
+                    .opacity(0.7)
+                    .frame(width: rect.width, height: rect.height)
+            }
             
             // Label
             if rect.width > 100 && rect.height > 50 {
-                RectangleLabel(item: item, rect: rect)
+                RectangleLabel(item: item, rect: rect, isHovering: isHovering)
                     .padding(8)
             } else if rect.width > 50 && rect.height > 30 {
                 // Simplified label for smaller cells
@@ -178,31 +187,101 @@ struct TreemapCell: View {
                     .shadow(color: .black, radius: 1, x: 1, y: 1)
                     .padding(4)
                     .frame(maxWidth: rect.width - 8)
+                    .scaleEffect(isHovering ? 1.1 : 1.0)
+            }
+            
+            // Hover indicator for small cells without visible labels
+            if isHovering && (rect.width <= 50 || rect.height <= 30) {
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.7))
+                        .frame(width: 20, height: 20)
+                    
+                    Circle()
+                        .stroke(Color.black, lineWidth: 1)
+                        .frame(width: 20, height: 20)
+                }
+                .shadow(radius: 2)
+                .position(x: rect.width / 2, y: rect.height / 2)
             }
         }
         .frame(width: rect.width, height: rect.height)
         .position(x: rect.midX, y: rect.midY)
+        .brightness(isHovering ? 0.15 : 0)
+        .scaleEffect(isHovering ? 1.01 : 1.0, anchor: .center)
+        .zIndex(isHovering ? 10 : 0)  // Bring hovered item to front
         .onHover { hovering in
-            self.isHovering = hovering
+            withAnimation(.easeInOut(duration: 0.2)) {
+                self.isHovering = hovering
+            }
         }
         .onTapGesture {
             onClick()
         }
-        .brightness(isHovering && item.isDirectory ? 0.1 : 0)
-        .animation(.easeInOut(duration: 0.15), value: isHovering)
+        .overlay(
+            isHovering ? detailedTooltip : nil,
+            alignment: .center
+        )
         .help(item.isDirectory ? "Click to navigate to \(item.name)" : "\(item.name) (\(item.formattedSize))")
+    }
+    
+    private var detailedTooltip: some View {
+        // Only show detailed tooltip if rectangle is large enough
+        Group {
+            if rect.width > 150 && rect.height > 100 && !item.isDirectory {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(item.name)
+                        .font(.system(size: 14, weight: .bold))
+                        .lineLimit(2)
+                    
+                    Divider()
+                    
+                    HStack {
+                        Text("Size:")
+                            .font(.system(size: 12, weight: .semibold))
+                        Spacer()
+                        Text(item.formattedSize)
+                            .font(.system(size: 12))
+                    }
+                    
+                    // Show path only if it's not too long
+                    if item.path.count < 60 {
+                        HStack {
+                            Text("Path:")
+                                .font(.system(size: 12, weight: .semibold))
+                            Spacer()
+                            Text(item.path)
+                                .font(.system(size: 12))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                    }
+                }
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.black.opacity(0.8))
+                        .shadow(color: .black.opacity(0.7), radius: 8)
+                )
+                .foregroundColor(.white)
+                .frame(width: min(rect.width - 20, 250))
+                .offset(y: rect.height / 4)
+                .transition(.opacity)
+            }
+        }
     }
 }
 
 struct RectangleLabel: View {
     let item: FileItem
     let rect: CGRect
+    let isHovering: Bool
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             // Semi-transparent background for better readability
             RoundedRectangle(cornerRadius: 4)
-                .fill(Color.black.opacity(0.3))
+                .fill(Color.black.opacity(isHovering ? 0.7 : 0.3))
                 .frame(width: min(rect.width - 16, 200), height: 40)
                 .overlay(
                     VStack(alignment: .leading, spacing: 2) {
@@ -222,6 +301,8 @@ struct RectangleLabel: View {
                     }
                     .padding(.vertical, 4)
                 )
+                .scaleEffect(isHovering ? 1.1 : 1.0)
+                .shadow(color: isHovering ? .white.opacity(0.3) : .clear, radius: 3)
         }
         .frame(width: rect.width - 16, height: rect.height - 16, alignment: .topLeading)
     }

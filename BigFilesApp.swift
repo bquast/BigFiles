@@ -13,6 +13,7 @@ struct BigFilesApp: App {
         WindowGroup {
             ContentView()
                 .frame(minWidth: 800, minHeight: 600)
+                .navigationTitle("File Tree Map")
         }
         .windowStyle(.hiddenTitleBar)
         .windowToolbarStyle(.unified)
