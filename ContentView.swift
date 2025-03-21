@@ -12,6 +12,7 @@ struct ContentView: View {
     @StateObject private var fileTree = FileTree()
     @State private var currentPath: URL?
     @State private var isScanning = false
+    @State private var showingFileCount = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -33,21 +34,54 @@ struct ContentView: View {
                 
                 Spacer()
                 
+                if let currentItem = fileTree.currentItem {
+                    Text("\(currentItem.formattedSize) • \(currentItem.children.count) items")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .padding(.trailing, 8)
+                }
+                
                 if isScanning {
                     ProgressView()
                         .scaleEffect(0.7)
                         .padding(.trailing, 5)
                     Text("Scanning...")
+                        .font(.system(size: 12))
                 }
             }
-            .padding()
-            .background(Color(NSColor.windowBackgroundColor).opacity(0.8))
+            .padding(10)
+            .background(
+                VisualEffectView(material: .menu, blendingMode: .behindWindow)
+                    .edgesIgnoringSafeArea(.top)
+            )
             
             // Breadcrumb navigation
             if !fileTree.breadcrumbs.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 4) {
-                        ForEach(fileTree.breadcrumbs) { crumb in
+                        Button(action: {
+                            if fileTree.breadcrumbs.count > 1 {
+                                navigateToDirectory(fileTree.breadcrumbs.first!)
+                            }
+                        }) {
+                            Image(systemName: "house")
+                                .font(.system(size: 12))
+                                .foregroundColor(.blue)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(fileTree.breadcrumbs.count <= 1)
+                        
+                        Text("/")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 12))
+                        
+                        ForEach(Array(fileTree.breadcrumbs.enumerated()), id: \.element.id) { index, crumb in
+                            if index > 0 {
+                                Text("/")
+                                    .foregroundColor(.secondary)
+                                    .font(.system(size: 12))
+                            }
+                            
                             Button(action: {
                                 navigateToDirectory(crumb)
                             }) {
@@ -55,13 +89,11 @@ struct ContentView: View {
                                     Text(crumb.name)
                                         .foregroundColor(.primary)
                                         .fontWeight(.semibold)
+                                        .font(.system(size: 12))
                                 } else {
-                                    HStack(spacing: 2) {
-                                        Text(crumb.name)
-                                            .foregroundColor(.blue)
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 10))
-                                    }
+                                    Text(crumb.name)
+                                        .foregroundColor(.blue)
+                                        .font(.system(size: 12))
                                 }
                             }
                             .buttonStyle(.plain)
@@ -69,17 +101,44 @@ struct ContentView: View {
                     }
                     .padding(.horizontal)
                 }
-                .padding(.vertical, 8)
+                .padding(.vertical, 6)
                 .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
             }
             
             // Main content
             if let currentItem = fileTree.currentItem {
-                RectangularPieChartView(item: currentItem, onItemClick: { clickedItem in
-                    if clickedItem.isDirectory {
-                        navigateToDirectory(clickedItem)
+                ZStack {
+                    RectangularPieChartView(item: currentItem, onItemClick: { clickedItem in
+                        if clickedItem.isDirectory {
+                            navigateToDirectory(clickedItem)
+                        }
+                    })
+                    
+                    // Up button (only in subdirectories)
+                    if fileTree.breadcrumbs.count > 1 {
+                        VStack {
+                            HStack {
+                                Spacer()
+                                Button(action: {
+                                    if fileTree.breadcrumbs.count > 1 {
+                                        let parentIndex = fileTree.breadcrumbs.count - 2
+                                        navigateToDirectory(fileTree.breadcrumbs[parentIndex])
+                                    }
+                                }) {
+                                    Image(systemName: "arrow.up.circle.fill")
+                                        .font(.system(size: 24))
+                                        .foregroundColor(.white)
+                                        .shadow(radius: 2)
+                                        .padding(12)
+                                        .background(Circle().fill(Color.black.opacity(0.2)))
+                                }
+                                .buttonStyle(.plain)
+                                .padding()
+                            }
+                            Spacer()
+                        }
                     }
-                })
+                }
             } else {
                 VStack {
                     Spacer()
@@ -123,6 +182,25 @@ struct ContentView: View {
             await fileTree.expandDirectory(item)
             isScanning = false
         }
+    }
+}
+
+// Helper for NSVisualEffectView to get macOS native blur
+struct VisualEffectView: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+    
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        return view
+    }
+    
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
     }
 }
 

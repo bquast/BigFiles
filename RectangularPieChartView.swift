@@ -152,29 +152,45 @@ struct TreemapCell: View {
     @State private var isHovering = false
     
     var body: some View {
-        Rectangle()
-            .fill(color.opacity(isHovering && item.isDirectory ? 0.8 : 0.6))
-            .frame(width: rect.width, height: rect.height)
-            .position(x: rect.midX, y: rect.midY)
-            .overlay(
-                Rectangle()
-                    .stroke(Color.white, lineWidth: 1)
-                    .opacity(0.3)
-                    .frame(width: rect.width, height: rect.height)
-                    .position(x: rect.midX, y: rect.midY)
-            )
-            .overlay(
+        ZStack(alignment: .topLeading) {
+            // Base rectangle
+            Rectangle()
+                .fill(color.opacity(isHovering && item.isDirectory ? 0.8 : 0.6))
+                .frame(width: rect.width, height: rect.height)
+            
+            // White border
+            Rectangle()
+                .stroke(Color.white, lineWidth: 1)
+                .opacity(0.4)
+                .frame(width: rect.width, height: rect.height)
+            
+            // Label
+            if rect.width > 100 && rect.height > 50 {
                 RectangleLabel(item: item, rect: rect)
-            )
-            .onHover { hovering in
-                self.isHovering = hovering
+                    .padding(8)
+            } else if rect.width > 50 && rect.height > 30 {
+                // Simplified label for smaller cells
+                Text(item.name)
+                    .font(.system(size: 10))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .foregroundColor(.white)
+                    .shadow(color: .black, radius: 1, x: 1, y: 1)
+                    .padding(4)
+                    .frame(maxWidth: rect.width - 8)
             }
-            .onTapGesture {
-                onClick()
-            }
-            .brightness(isHovering && item.isDirectory ? 0.1 : 0)
-            .animation(.easeInOut(duration: 0.15), value: isHovering)
-            .help(item.isDirectory ? "Click to navigate to \(item.name)" : "\(item.name) (\(item.formattedSize))")
+        }
+        .frame(width: rect.width, height: rect.height)
+        .position(x: rect.midX, y: rect.midY)
+        .onHover { hovering in
+            self.isHovering = hovering
+        }
+        .onTapGesture {
+            onClick()
+        }
+        .brightness(isHovering && item.isDirectory ? 0.1 : 0)
+        .animation(.easeInOut(duration: 0.15), value: isHovering)
+        .help(item.isDirectory ? "Click to navigate to \(item.name)" : "\(item.name) (\(item.formattedSize))")
     }
 }
 
@@ -183,23 +199,30 @@ struct RectangleLabel: View {
     let rect: CGRect
     
     var body: some View {
-        // Only show labels on rectangles large enough to display text
-        if rect.width > 80 && rect.height > 40 {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.name)
-                    .font(.system(size: min(14, max(10, rect.width / 20))))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .foregroundColor(.white)
-                    .shadow(color: .black, radius: 1)
-                
-                Text(item.formattedSize)
-                    .font(.system(size: min(12, max(8, rect.width / 25))))
-                    .foregroundColor(.white.opacity(0.9))
-                    .shadow(color: .black, radius: 1)
-            }
-            .padding(6)
-            .frame(width: rect.width - 12, height: rect.height - 12, alignment: .topLeading)
+        VStack(alignment: .leading, spacing: 4) {
+            // Semi-transparent background for better readability
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.black.opacity(0.3))
+                .frame(width: min(rect.width - 16, 200), height: 40)
+                .overlay(
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(item.name)
+                            .font(.system(size: min(13, max(10, rect.width / 25))))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .foregroundColor(.white)
+                            .shadow(color: .black, radius: 1)
+                            .padding(.horizontal, 4)
+                        
+                        Text(item.formattedSize)
+                            .font(.system(size: min(11, max(8, rect.width / 30))))
+                            .foregroundColor(.white.opacity(0.9))
+                            .shadow(color: .black, radius: 1)
+                            .padding(.horizontal, 4)
+                    }
+                    .padding(.vertical, 4)
+                )
         }
+        .frame(width: rect.width - 16, height: rect.height - 16, alignment: .topLeading)
     }
 } 
